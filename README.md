@@ -120,3 +120,15 @@
 ---
 
 ## 📁 Project Structure
+mycampus/
+├── components/ # React UI components
+│ ├── pages/ # Route components
+│ └── .tsx # Shared components
+├── backend/
+│ └── app/
+│ ├── routers/ # API endpoints
+│ ├── models.py # SQLAlchemy models
+│ └── main.py # FastAPI app
+├── api.ts # Frontend API client
+├── types.ts # TypeScript definitions
+└── vite.config.ts # Build configuration
