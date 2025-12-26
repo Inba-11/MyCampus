@@ -119,16 +119,61 @@
 
 ---
 
-## 📁 Project Structure
+## 📂 Project Structure
+
+```
 mycampus/
-├── components/ # React UI components
-│ ├── pages/ # Route components
-│ └── .tsx # Shared components
+├── components/                 # React UI components
+│   ├── pages/                  # Route components
+│   └── *.tsx                   # Shared components
 ├── backend/
-│ └── app/
-│ ├── routers/ # API endpoints
-│ ├── models.py # SQLAlchemy models
-│ └── main.py # FastAPI app
-├── api.ts # Frontend API client
-├── types.ts # TypeScript definitions
-└── vite.config.ts # Build configuration
+│   └── app/
+│       ├── routers/            # API endpoints
+│       ├── models.py           # SQLAlchemy models
+│       └── main.py             # FastAPI app entrypoint
+├── api.ts                      # Frontend API client
+├── types.ts                    # TypeScript definitions
+└── vite.config.ts              # Build configuration
+```
+
+---
+
+## 👥 User Roles & Permissions
+
+| Role    | Permissions |
+|--------|-------------|
+| **STUDENT** | View subjects, apply leaves, chat, AI assistant |
+| **TEACHER** | Student + manage subjects, view leaves |
+| **MENTOR** | Teacher + approve/reject leaves |
+| **ADMIN** | Full system access |
+
+---
+
+## 📦 Tech Stack — Deep Dive
+
+| Layer      | Technology  | Purpose |
+|-----------|-------------|--------|
+| **Frontend** | React 19 | UI rendering |
+| **Language** | TypeScript | Type safety |
+| **Build Tool** | Vite | Fast HMR & bundling |
+| **Backend** | FastAPI | REST API |
+| **ORM** | SQLAlchemy | Database abstraction |
+| **Database** | SQLite | Data persistence |
+| **AI** | Gemini API | Assistant features |
+
+---
+
+## 👤 Author
+
+**Inba-11** — [@Inba-11](https://github.com/Inba-11)
+
+---
+
+<div align="center">
+
+**Built with ⚡ by developers, for developers**
+
+[⭐ Star](https://github.com/Inba-11/MyCampus) • [🐛 Report Bug](https://github.com/Inba-11/MyCampus/issues) • [💡 Request Feature](https://github.com/Inba-11/MyCampus/issues)
+
+</div>
+
