@@ -1,0 +1,7 @@
+{
+  "name": "MyCampus",
+  "description": "An open-source web application to streamline communication and academic management for Indian educational institutes. MyCampus provides a structured, secure platform for students, teachers, and admins, designed to work on low-end devices and support regional languages.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
