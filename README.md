@@ -171,7 +171,8 @@ mycampus/
 
 <div align="center">
 
-**Built with ⚡ by developers, for developers**
+[![Watch the video](https://img.youtube.com/vi/otcVFmW0AfE/0.jpg)](https://youtu.be/otcVFmW0AfE)
+
 
 [⭐ Star](https://github.com/Inba-11/MyCampus) • [🐛 Report Bug](https://github.com/Inba-11/MyCampus/issues) • [💡 Request Feature](https://github.com/Inba-11/MyCampus/issues)
 
