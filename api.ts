@@ -1,7 +1,8 @@
 // Minimal API client for MyCampus frontend
-// Uses Vite env VITE_API_URL, defaults to http://localhost:8000/api
+// Uses Vite env VITE_API_URL — falls back to relative /api (works in production when served from same domain)
+// For local dev, vite.config.ts proxies /api → http://localhost:8000
 
-const BASE_URL = (import.meta as any)?.env?.VITE_API_URL || 'http://localhost:8000/api';
+const BASE_URL = (import.meta as any)?.env?.VITE_API_URL || '/api';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -18,7 +19,7 @@ async function request<T>(path: string, options: { method?: HttpMethod; body?: a
   });
   if (!res.ok) {
     let detail: any = undefined;
-    try { detail = await res.json(); } catch {}
+    try { detail = await res.json(); } catch { }
     throw new Error(detail?.detail || `HTTP ${res.status}`);
   }
   const contentType = res.headers.get('content-type') || '';

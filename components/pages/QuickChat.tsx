@@ -98,18 +98,18 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
     };
 
     const deleteForMe = async (id: number) => {
-        try { await apiHideMessage(id, currentUser.id); } catch {}
+        try { await apiHideMessage(id, currentUser.id); } catch { }
         setMessages(prev => prev.filter(m => m.id !== id));
     };
 
     const deleteForEveryone = async (id: number) => {
-        try { await deleteMessageApi(id); } catch {}
+        try { await deleteMessageApi(id); } catch { }
         setMessages(prev => prev.filter(m => m.id !== id));
     };
 
     const clearChatForMe = async () => {
         if (!selectedRoomId) return;
-        try { await apiClearRoom(selectedRoomId, currentUser.id); } catch {}
+        try { await apiClearRoom(selectedRoomId, currentUser.id); } catch { }
         setMessages([]);
     };
 
@@ -139,12 +139,15 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
             const apiBase = (import.meta as any).env?.VITE_API_URL as string | undefined;
             let wsBase: string;
             if (apiBase) {
+                // Use VITE_API_URL, converting http(s) → ws(s) and stripping /api
                 wsBase = apiBase
                     .replace(/^https:\/\//, 'wss://')
                     .replace(/^http:\/\//, 'ws://')
                     .replace(/\/api\/?$/, '');
             } else {
-                wsBase = 'ws://localhost:8000';
+                // Auto-detect from current page URL (works on Railway without env vars)
+                const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsBase = `${proto}//${window.location.host}`;
             }
             const ws = new WebSocket(`${wsBase}/ws/${selectedRoomId}`);
             wsRef.current = ws;
@@ -177,16 +180,16 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
                         }
                         setTypingUsersTick(t => t + 1);
                     }
-                } catch {}
+                } catch { }
             };
             ws.onclose = () => { wsRef.current = null; };
             return () => {
-                try { ws.close(); } catch {}
+                try { ws.close(); } catch { }
                 wsRef.current = null;
                 typingUsersRef.current = {};
                 setTypingUsersTick(t => t + 1);
             };
-        } catch {}
+        } catch { }
     }, [selectedRoomId]);
 
     useEffect(() => {
@@ -213,7 +216,7 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
         if (type.startsWith('audio/')) return 'audio';
         return 'document';
     };
-    
+
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const fl: FileList | null = event.target.files as FileList | null;
         if (!fl) return;
@@ -223,10 +226,10 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
             previewUrl: URL.createObjectURL(file),
             type: getFileType(file)
         }));
-        
+
         setAttachments(prev => [...prev, ...newAttachments]);
     };
-    
+
     const removeAttachment = (previewUrl: string) => {
         setAttachments(prev => prev.filter(att => {
             const shouldKeep = att.previewUrl !== previewUrl;
@@ -290,14 +293,14 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
     const notifyTypingStart = () => {
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        try { ws.send(JSON.stringify({ type: 'typing:start', user: { id: currentUser.id, name: currentUser.name } })); } catch {}
+        try { ws.send(JSON.stringify({ type: 'typing:start', user: { id: currentUser.id, name: currentUser.name } })); } catch { }
         if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = window.setTimeout(() => {
-            try { ws.send(JSON.stringify({ type: 'typing:stop', user: { id: currentUser.id, name: currentUser.name } })); } catch {}
+            try { ws.send(JSON.stringify({ type: 'typing:stop', user: { id: currentUser.id, name: currentUser.name } })); } catch { }
             typingTimeoutRef.current = null;
         }, 1500);
     };
-    
+
     const handleDeleteMessage = (id: number) => {
         setMessages(prev => prev.filter(msg => msg.id !== id));
     };
@@ -324,7 +327,7 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
                     setRecordingStatus('idle');
                     stream.getTracks().forEach(track => track.stop());
                 };
-                
+
                 mediaRecorder.current.start();
                 setRecordingStatus('recording');
             } catch (err) {
@@ -346,36 +349,36 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
     };
 
     const renderAttachmentPreview = () => (
-      <div className="p-2 space-y-2">
-        {attachments.map(att => {
-            const sizeInKB = (att.file.size / 1024).toFixed(1);
-            return (
-              <div key={att.previewUrl} className="relative flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-2">
-                {att.type === 'image' && <img src={att.previewUrl} alt={att.file.name} className="w-12 h-12 rounded-md object-cover mr-2" />}
-                {att.type === 'audio' && <div className="w-12 h-12 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 rounded-md mr-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></div>}
-                {(att.type === 'document' || att.type === 'zip') && <div className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-600 rounded-md mr-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></div>}
-                <div className="flex-1 truncate">
-                    <p className="text-sm font-medium truncate">{att.file.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{sizeInKB} KB</p>
-                </div>
-                 <button onClick={() => removeAttachment(att.previewUrl)} className="absolute -top-1 -right-1 p-0.5 bg-gray-600 text-white rounded-full hover:bg-red-500"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg></button>
-              </div>
-            );
-        })}
-      </div>
+        <div className="p-2 space-y-2">
+            {attachments.map(att => {
+                const sizeInKB = (att.file.size / 1024).toFixed(1);
+                return (
+                    <div key={att.previewUrl} className="relative flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-2">
+                        {att.type === 'image' && <img src={att.previewUrl} alt={att.file.name} className="w-12 h-12 rounded-md object-cover mr-2" />}
+                        {att.type === 'audio' && <div className="w-12 h-12 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 rounded-md mr-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg></div>}
+                        {(att.type === 'document' || att.type === 'zip') && <div className="w-12 h-12 flex items-center justify-center bg-gray-200 dark:bg-gray-600 rounded-md mr-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></div>}
+                        <div className="flex-1 truncate">
+                            <p className="text-sm font-medium truncate">{att.file.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{sizeInKB} KB</p>
+                        </div>
+                        <button onClick={() => removeAttachment(att.previewUrl)} className="absolute -top-1 -right-1 p-0.5 bg-gray-600 text-white rounded-full hover:bg-red-500"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg></button>
+                    </div>
+                );
+            })}
+        </div>
     );
-    
+
     return (
         <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md relative">
             <header className="p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Quick Chat</h2>
                 <div className="flex items-center gap-2">
-                  {rooms.length > 0 && (
-                    <select value={selectedRoomId ?? ''} onChange={e => setSelectedRoomId(Number(e.target.value))} className="p-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
-                        {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
-                  )}
-                  <button onClick={clearChatForMe} className="px-3 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200">Clear Chat</button>
+                    {rooms.length > 0 && (
+                        <select value={selectedRoomId ?? ''} onChange={e => setSelectedRoomId(Number(e.target.value))} className="p-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+                            {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                        </select>
+                    )}
+                    <button onClick={clearChatForMe} className="px-3 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200">Clear Chat</button>
                 </div>
             </header>
             <main className="flex-1 p-6 space-y-4 overflow-y-auto no-scrollbar">
@@ -384,51 +387,51 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
                     const isMyMessage = msg.user.id === currentUser.id;
                     return (
                         <div key={msg.id} className={`flex items-end gap-2 group ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                            {isMyMessage && 
-                              <button onClick={() => handleDeleteMessage(msg.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500" aria-label="Delete message">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                              </button>
+                            {isMyMessage &&
+                                <button onClick={() => handleDeleteMessage(msg.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500" aria-label="Delete message">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                </button>
                             }
                             <div className={`max-w-xs lg:max-w-md`}>
                                 {!isMyMessage && <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-3">{msg.user.name}</p>}
                                 <div className={`p-1 rounded-2xl shadow ${isMyMessage ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-200 rounded-bl-none'}`}>
-                                   <div className="p-2 space-y-2">
-                                    {msg.attachments?.map((att, index) => (
-                                        <div key={`${att.name}-${index}`}>
-                                            {att.type === 'image' && <img src={att.dataUrl} alt={att.name} className="rounded-lg max-w-full h-auto"/>}
-                                            {att.type === 'audio' && <audio controls src={att.dataUrl} className="w-full" />}
-                                            {(att.type === 'document' || att.type === 'zip') && 
-                                                <a href={att.dataUrl} download={att.name} className="flex items-center p-2 bg-indigo-400/50 dark:bg-gray-600 rounded-lg hover:bg-indigo-400/80 dark:hover:bg-gray-500">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                    <span className="truncate text-sm font-medium">{att.name}</span>
-                                                </a>
-                                            }
-                                        </div>
-                                    ))}
-                                    {editingId === msg.id ? (
-                                        <div className="flex items-center gap-2">
-                                            <input value={editText} onChange={e => setEditText(e.target.value)} className="flex-1 px-2 py-1 rounded bg-white/90 text-gray-800" />
-                                            <button onClick={() => saveEdit(msg.id)} className="px-2 py-1 text-xs bg-green-600 text-white rounded">Save</button>
-                                            <button onClick={cancelEdit} className="px-2 py-1 text-xs bg-gray-500 text-white rounded">Cancel</button>
-                                        </div>
-                                    ) : (
-                                        msg.text && <p className="px-2 whitespace-pre-wrap">{msg.text}</p>
-                                    )}
-                                   </div>
+                                    <div className="p-2 space-y-2">
+                                        {msg.attachments?.map((att, index) => (
+                                            <div key={`${att.name}-${index}`}>
+                                                {att.type === 'image' && <img src={att.dataUrl} alt={att.name} className="rounded-lg max-w-full h-auto" />}
+                                                {att.type === 'audio' && <audio controls src={att.dataUrl} className="w-full" />}
+                                                {(att.type === 'document' || att.type === 'zip') &&
+                                                    <a href={att.dataUrl} download={att.name} className="flex items-center p-2 bg-indigo-400/50 dark:bg-gray-600 rounded-lg hover:bg-indigo-400/80 dark:hover:bg-gray-500">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                        <span className="truncate text-sm font-medium">{att.name}</span>
+                                                    </a>
+                                                }
+                                            </div>
+                                        ))}
+                                        {editingId === msg.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <input value={editText} onChange={e => setEditText(e.target.value)} className="flex-1 px-2 py-1 rounded bg-white/90 text-gray-800" />
+                                                <button onClick={() => saveEdit(msg.id)} className="px-2 py-1 text-xs bg-green-600 text-white rounded">Save</button>
+                                                <button onClick={cancelEdit} className="px-2 py-1 text-xs bg-gray-500 text-white rounded">Cancel</button>
+                                            </div>
+                                        ) : (
+                                            msg.text && <p className="px-2 whitespace-pre-wrap">{msg.text}</p>
+                                        )}
+                                    </div>
                                     <div className="flex items-center justify-between px-2 pb-1 mt-1">
-                                      <span className="text-xs opacity-75">{msg.timestamp}</span>
-                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-                                        {isMyMessage && editingId !== msg.id && (
-                                            <>
-                                              <button onClick={() => startEdit(msg.id, msg.text)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Edit</button>
-                                              <button onClick={() => deleteForMe(msg.id)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Del me</button>
-                                              <button onClick={() => deleteForEveryone(msg.id)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Del all</button>
-                                            </>
-                                        )}
-                                        {!isMyMessage && (
-                                            <button onClick={() => deleteForMe(msg.id)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Hide</button>
-                                        )}
-                                      </div>
+                                        <span className="text-xs opacity-75">{msg.timestamp}</span>
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                                            {isMyMessage && editingId !== msg.id && (
+                                                <>
+                                                    <button onClick={() => startEdit(msg.id, msg.text)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Edit</button>
+                                                    <button onClick={() => deleteForMe(msg.id)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Del me</button>
+                                                    <button onClick={() => deleteForEveryone(msg.id)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Del all</button>
+                                                </>
+                                            )}
+                                            {!isMyMessage && (
+                                                <button onClick={() => deleteForMe(msg.id)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Hide</button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -439,18 +442,18 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
             </main>
             <footer className="p-2 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700">
                 {attachments.length > 0 && renderAttachmentPreview()}
-                <AttachmentMenuModal 
-                    isOpen={isAttachmentMenuOpen} 
-                    onClose={() => setIsAttachmentMenuOpen(false)} 
-                    onSelect={handleAttachmentTypeSelect} 
+                <AttachmentMenuModal
+                    isOpen={isAttachmentMenuOpen}
+                    onClose={() => setIsAttachmentMenuOpen(false)}
+                    onSelect={handleAttachmentTypeSelect}
                 />
                 <div className="flex items-end p-2">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple className="hidden" />
                     <button onClick={() => setIsAttachmentMenuOpen(true)} className="p-2 text-gray-500 hover:text-indigo-500" aria-label="Attach file">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                     </button>
-                    <textarea ref={inputTextRef} value={inputText} onChange={e => { setInputText(e.target.value); notifyTypingStart(); }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder={recordingStatus === 'recording' ? 'Recording audio...' : "Type a message..."} rows={1} className="flex-1 mx-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={recordingStatus === 'recording'}/>
-                    
+                    <textarea ref={inputTextRef} value={inputText} onChange={e => { setInputText(e.target.value); notifyTypingStart(); }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder={recordingStatus === 'recording' ? 'Recording audio...' : "Type a message..."} rows={1} className="flex-1 mx-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled={recordingStatus === 'recording'} />
+
                     {inputText.trim() || attachments.length > 0 ? (
                         <button onClick={handleSendMessage} className="p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600" aria-label="Send message">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
