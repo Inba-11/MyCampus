@@ -137,7 +137,15 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
         if (!selectedRoomId) return;
         try {
             const apiBase = (import.meta as any).env?.VITE_API_URL as string | undefined;
-            const wsBase = apiBase ? apiBase.replace(/^http/, 'ws').replace(/\/api$/, '') : 'ws://localhost:8000';
+            let wsBase: string;
+            if (apiBase) {
+                wsBase = apiBase
+                    .replace(/^https:\/\//, 'wss://')
+                    .replace(/^http:\/\//, 'ws://')
+                    .replace(/\/api\/?$/, '');
+            } else {
+                wsBase = 'ws://localhost:8000';
+            }
             const ws = new WebSocket(`${wsBase}/ws/${selectedRoomId}`);
             wsRef.current = ws;
             ws.onmessage = (ev) => {

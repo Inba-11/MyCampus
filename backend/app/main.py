@@ -11,12 +11,16 @@ from datetime import date as date_cls
 
 app = FastAPI(title="MyCampus API")
 
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173").split(",")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173")
+allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
+# If configured with '*', allow all origins (useful for Railway/open deployments)
+_allow_all = "*" in allowed_origins
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_origins=["*"] if _allow_all else allowed_origins,
+    allow_credentials=False if _allow_all else True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
