@@ -56,6 +56,7 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editText, setEditText] = useState<string>('');
     const [sendError, setSendError] = useState<string | null>(null);
+    const [apiError, setApiError] = useState<string | null>(null);
     const mediaRecorder = useRef<MediaRecorder | null>(null);
     const audioChunks = useRef<Blob[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,10 +71,21 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
         const loadRooms = async () => {
             try {
                 const rs = await getChatRooms();
-                setRooms(rs);
-                if (rs.length > 0) setSelectedRoomId(rs[0].id);
-            } catch (e) {
-                // ignore
+                if (rs && rs.length > 0) {
+                    setRooms(rs);
+                    setSelectedRoomId(rs[0].id);
+                    setApiError(null);
+                } else {
+                    // No rooms returned — use fallback room 1 (seeded on backend startup)
+                    setRooms([{ id: 1, name: 'General' }]);
+                    setSelectedRoomId(1);
+                }
+            } catch (e: any) {
+                console.error('Failed to load chat rooms:', e);
+                setApiError(`Backend unreachable: ${e?.message || 'Check VITE_API_URL in Railway settings.'}`);
+                // Use fallback so the page is not blank
+                setRooms([{ id: 1, name: 'General' }]);
+                setSelectedRoomId(1);
             }
         };
         loadRooms();
@@ -388,6 +400,14 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
                     <button onClick={clearChatForMe} className="px-3 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200">Clear Chat</button>
                 </div>
             </header>
+            {apiError && (
+                <div className="px-4 py-2 bg-yellow-100 dark:bg-yellow-900/40 border-b border-yellow-300 dark:border-yellow-700 flex items-center justify-between gap-2">
+                    <span className="text-xs text-yellow-800 dark:text-yellow-300 flex-1">⚠️ {apiError}</span>
+                    <button onClick={() => setApiError(null)} className="text-yellow-600 hover:text-yellow-800 flex-shrink-0" aria-label="Dismiss">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                    </button>
+                </div>
+            )}
             <main className="flex-1 p-6 space-y-4 overflow-y-auto no-scrollbar">
                 {messages.length === 0 && <p className="text-center text-gray-400">No messages yet. Start the conversation!</p>}
                 {messages.map(msg => {
