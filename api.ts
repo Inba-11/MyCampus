@@ -8,6 +8,8 @@ type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 async function request<T>(path: string, options: { method?: HttpMethod; body?: any; headers?: Record<string, string> } = {}): Promise<T> {
   const { method = 'GET', body, headers = {} } = options;
+  // Use 'same-origin' so requests work with CORS allow_origins='*'
+  // 'include' is incompatible with wildcard CORS and causes silent failures on Railway
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
@@ -15,7 +17,7 @@ async function request<T>(path: string, options: { method?: HttpMethod; body?: a
       ...headers,
     } as any,
     body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
-    credentials: 'include',
+    credentials: 'same-origin',
   });
   if (!res.ok) {
     let detail: any = undefined;

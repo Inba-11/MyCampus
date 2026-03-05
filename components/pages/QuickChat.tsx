@@ -55,6 +55,7 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
     const typingTimeoutRef = useRef<number | null>(null);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editText, setEditText] = useState<string>('');
+    const [sendError, setSendError] = useState<string | null>(null);
     const mediaRecorder = useRef<MediaRecorder | null>(null);
     const audioChunks = useRef<Blob[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -267,15 +268,21 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
             }))
         );
 
-        // Persist only text content for now
+        // Save to backend
         let savedId = Date.now();
+        let apiOk = false;
         try {
             if (textToSend.trim()) {
                 const saved = await apiSendMessage(selectedRoomId, { sender_id: currentUser.id, sender_name: currentUser.name, content: textToSend.trim() });
                 savedId = saved.id;
+                apiOk = true;
+                setSendError(null);
+            } else {
+                apiOk = true; // attachment-only, no text to persist
             }
-        } catch (e) {
-            // fallback to local append
+        } catch (e: any) {
+            console.error('Send failed:', e);
+            setSendError(`Failed to send: ${e?.message || 'Server unreachable. Check VITE_API_URL in Railway settings.'}`);
         }
 
         const newMessage: QuickChatMessage = {
@@ -441,6 +448,14 @@ const QuickChatPage = ({ currentUser }: { currentUser: User }) => {
                 <div ref={messagesEndRef} />
             </main>
             <footer className="p-2 bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700">
+                {sendError && (
+                    <div className="mx-2 mb-2 px-3 py-2 bg-red-100 dark:bg-red-900/50 border border-red-300 dark:border-red-700 rounded-lg flex items-center justify-between gap-2">
+                        <span className="text-xs text-red-700 dark:text-red-300 flex-1">{sendError}</span>
+                        <button onClick={() => setSendError(null)} className="text-red-500 hover:text-red-700 flex-shrink-0" aria-label="Dismiss error">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                        </button>
+                    </div>
+                )}
                 {attachments.length > 0 && renderAttachmentPreview()}
                 <AttachmentMenuModal
                     isOpen={isAttachmentMenuOpen}
